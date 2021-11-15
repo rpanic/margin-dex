@@ -39,6 +39,8 @@ contract TradingCore is LiquidityManager {
     //TODO Limit asset so not any arbitrary token can be used
     function openTrade(address asset, address assetAgainst, uint256 amount, uint256 leverage) public {
 
+        require(pairs[asset][assetAgainst].enabled > 0, "Pair not allowed");
+        
         //TODO Make Approves better
         IERC20(assetAgainst).approve(address(swapProvider), ~uint256(0));
 
@@ -102,6 +104,9 @@ contract TradingCore is LiquidityManager {
     }
 
     function liquidate(uint256 id) public {
+
+
+
         //TODO
     }
 
@@ -120,5 +125,37 @@ contract TradingCore is LiquidityManager {
         collateral[msg.sender][asset] -= amount;
         IERC20(asset).safeTransfer(msg.sender, amount);
     }
+
+    //Pair Logic
+
+    struct Pair{
+        //Require: asset1 < asset2
+        // address asset1;
+        // address asset2;
+        uint128 provision;
+        uint128 enabled;   //Should safe 1 Storage slot
+        address swapProvider;
+    }
+
+    mapping(address => mapping(address => Pair)) public pairs;
+
+    function updatePair(address asset1, address asset2, uint128 provision, address _swapProvider) public onlyOwner {
+        require(asset1 < asset2, "Tokens unordered");
+        Pair storage p = pairs[asset1][asset2];
+        // p.asset1 = asset1;
+        // p.asset2 = asset2;
+        p.provision = provision;
+        p.enabled = 1;
+        p.swapProvider = _swapProvider;
+    }
+
+    function removePair(address asset1, address asset2) public onlyOwner {
+        pairs[asset1][asset2].enabled = 0;
+    }
+
+    // modifier pairEnabled(address asset1, address asset2) {
+    //     require(pairs[asset1][asset2].enabled > 0, "Pair not allowed");
+    //     _;
+    // }
 
 }

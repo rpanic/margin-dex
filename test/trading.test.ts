@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { deployContract, deployMockContract, MockProvider } from "ethereum-waffle";
 import { BigNumber, Contract, ContractFactory, Signer } from "ethers";
 import { ethers, deployments, network } from "hardhat";
-import { MockSwapProvider__factory, MockSwapProvider, MintableErc20, MintableErc20__factory, TradingCore__factory, TradingCore } from "../typechain";
+import { MockSwapProvider__factory, MockSwapProvider, MintableErc20, MintableErc20__factory, TradingCore__factory, TradingCore, LinearKinkInterestRateProvider__factory, LinearKinkInterestRateProvider } from "../typechain";
 import { traceDeprecation } from "process";
 
 const ether = ethers.utils.parseEther
@@ -23,7 +23,9 @@ describe("Margin-Trade Tests", () => {
         accounts = addresses;
     })
 
-    it("Test Simple Trade", async function() {
+
+    //Working
+    it2("Test Simple Trade", async function() {
         console.log("Accounts[0]: " + accounts[0])
 
         let usdt = await deploy<MintableErc20__factory, MintableErc20>("MintableErc20", signers[0], ["USDT", "USDT"])
@@ -37,7 +39,7 @@ describe("Margin-Trade Tests", () => {
             let a = _a.connect(signers[0])
             await a.mint(ether("200000"))
             await a.transfer(swapProvider.address, ether("100000"))
-        })
+        });
 
         await weth.connect(signers[0]).transfer(await signers[1].getAddress(), ether("100"))
 
@@ -60,6 +62,22 @@ describe("Margin-Trade Tests", () => {
         console.log(fether(await trade.collateral(addresses[1], weth.address)))
         console.log("Profit: " + fether((await trade.collateral(addresses[1], weth.address)).sub(ether("10"))) + "WETH")
         
+    })
+
+    //Finished
+    it2("Test LinearKinkInterestRateProvider", async function() {
+
+        let provider = await deploy<LinearKinkInterestRateProvider__factory, LinearKinkInterestRateProvider>("LinearKinkInterestRateProvider", signers[0])
+
+        let cases = [
+            [100, 10, 1], [100, 21, 2.1], [100, 99, 27], [100, 80, 8], [100, 100, 28]
+        ];
+
+        for(let i = 0 ; i < cases.length ; i++){
+            let c = cases[i];
+            expect(fether((await provider.getInterestRate(c[0], c[1])))).to.equal((c[2] / 100).toString())
+        }
+
     })
 
 })
